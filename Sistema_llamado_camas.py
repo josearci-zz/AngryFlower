@@ -1,4 +1,5 @@
 import sys
+import time
 import numpy as np
 from queue import Queue
 from PyQt5.QtCore import *
@@ -28,22 +29,16 @@ class MainWindow(QMainWindow):
         self.show()
 
 class CentralWidget(QWidget):
-    def __init__(self, *args):
-        QWidget.__init__(self, *args)
-        self.list = []
-        self.conteo = 0
-        self.numero = QLabel()
-        self.nombre = QLabel()
-        self.tiempo = QLabel()
+    def __init__(self):
+        QWidget.__init__(self)
 
-        self.camas = QSplitter(Qt.Vertical)
-        self.camas.setSizes([60]*10)
+        self.llamados = Llamados()
 
         self.alarmas = QFrame()
         self.alarmas.setFrameShape(QFrame.StyledPanel)
 
         splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self.camas)
+        splitter.addWidget(self.llamados)
         splitter.addWidget(self.alarmas)
         splitter.setSizes([800,400])
 
@@ -51,35 +46,88 @@ class CentralWidget(QWidget):
         cw.addWidget(splitter)
         self.setLayout(cw)
 
-    def LLamadoCama(self):
-        global QueueCamas
-        pacientes = [[10,'Luis Felipe Ordoñez'],[15,'José Ricardo Arciniegas'],[99,'Angry Flower']]
+class Llamados(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
 
-        if self.conteo < 10:
-            data = QueueCamas.get()
-            if data > 0:
-                self.conteo += 1
-                self.list.append(data)
-            else:
-                self.conteo -= 1
-                self.list.remove(self.list[0]) #solucionar problema de eliminar el correcto
+        self.datos = Informacion()
+        self.pacientes = Obtener_pacientes()
 
-            datos = QSplitter(Qt.Horizontal)
+        self.numero_plots = 10
 
-            for i in reversed(self.list):
-                self.numero.setText(str(pacientes[i-1][0]))
-                self.nombre.setText(pacientes[i-1][1])
-                datos.addWidget(self.numero)
-                datos.addWidget(self.nombre)
-                self.camas.addWidget(datos)
-            camaswidget = QVBoxLayout()
-            camaswidget.addWidget(self.camas)
-            self.setLayout(camaswidget)
+        self.grid = QGridLayout()
+        for i in range(self.numero_plots):
+            self.grid.setRowMinimumHeight(i,60)
+        self.setLayout(self.grid)
+
+    def llamados_update(self):
+        lista_llamados = self.pacientes.lista()
+        conteo = 0
+        for i in lista_llamados:
+            datos_widget = self.datos.datos_ready(i)
+            self.grid.addLayout(datos_widget,conteo,0)
+            conteo += 1
+"""        for i in range(len(lista_llamados),self.numero_plots):
+            datos_widget = self.datos.datos_ready([" "," "," "])
+            self.grid.addWidget(datos_widget,conteo,0)
+            conteo += 1"""
+
+class Informacion(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+
+        # Sectores widget
+        self.numero = QLabel()
+        self.nombre = QLabel()
+        self.tiempo = QLabel()
+        self.grid = QGridLayout(self)
+        self.grid.setColumnMinimumWidth(0,100)
+        self.grid.setColumnMinimumWidth(1,550)
+        self.grid.setColumnMinimumWidth(2,150)
+
+    def datos_ready(self, datos):
+        self.numero.setText(str(datos[0]))
+        self.nombre.setText(datos[1])
+        self.tiempo.setText(datos[2])
+
+        self.grid.addWidget(self.numero,0,0)
+        self.grid.addWidget(self.nombre,0,1)
+        self.grid.addWidget(self.nombre,0,2)
+        return self.grid
+
+class Obtener_pacientes(object):
+    def __init__(self):
+        super(Obtener_pacientes, self).__init__()
+        self.pacientes = self.sacar_pacientes()
+
+        # Lista de pacientes para plot
+        self.lista_llamados = []
+
+    def sacar_pacientes(self):
+        # NOTA: deben estar ordenados por el numero de la cama!g
+        nombres_camas = [[1,"Luis Felipe","1 hora"],[2,"Jose Ricardo","1 hora"],[3,"Angry Flower","1 hora"]]
+        return nombres_camas
+
+    def lista(self):
+        global QueueAtender
+        global QueueAtendido
+
+        if not QueueAtender.empty():
+            input_on = QueueAtender.get()
+            self.lista_llamados.append(self.pacientes[input_on-1])
+        elif not QueueAtendido.empty():
+            input_off = QueueAtendido.get()
+            for i in self.pacientes:
+                if i[0] == abs(input_off): #cambiar input
+                    self.lista_llamados.remove(i)
+                    break
+
+        return self.lista_llamados
 
 class BottomWidget(QWidget): # Cambiar por leer puerto serial
-    def __init__(self, *args):
-        QWidget.__init__(self, *args)
-        self.cw = CentralWidget()
+    def __init__(self):
+        QWidget.__init__(self)
+        self.llw = Llamados()
 
         btn0 = QPushButton('Cama 0', self)
         btn1 = QPushButton('Cama 1', self)
@@ -106,36 +154,49 @@ class BottomWidget(QWidget): # Cambiar por leer puerto serial
 
     def boton0(self):
         global QueueCamas
-        QueueCamas.put(1)
-        self.cw.LLamadoCama()
+        QueueAtender.put(1)
+        self.llw.llamados_update()
 
     def boton1(self):
         global QueueCamas
-        QueueCamas.put(2)
-        self.cw.LLamadoCama()
+        QueueAtender.put(2)
+        #self.llw.llamados_update()
 
     def boton2(self):
         global QueueCamas
-        QueueCamas.put(3)
-        self.cw.LLamadoCama()
+        QueueAtender.put(3)
+        #self.llw.llamados_update()
 
     def boton0_off(self):
         global QueueCamas
         QueueCamas.put(-1)
-        self.cw.LLamadoCama()
+        #self.llw.llamados_update()
 
     def boton1_off(self):
         global QueueCamas
         QueueCamas.put(-2)
-        self.cw.LLamadoCama()
+        #self.llw.llamados_update()
 
     def boton2_off(self):
         global QueueCamas
         QueueCamas.put(-3)
-        self.cw.LLamadoCama()
+        #self.llw.llamados_update()
 
 if __name__== '__main__':
+
     QueueCamas = Queue()
+    QueueAtender = Queue()
+    QueueAtendido = Queue()
     app = QApplication(sys.argv)
     GUI = MainWindow()
     sys.exit(app.exec_())
+
+
+"""
+splitter = QSplitter(Qt.Horizontal)
+splitter.addWidget(self.numero)
+splitter.addWidget(self.nombre)
+splitter.addWidget(self.tiempo)
+splitter.setSizes([100,500,200])
+return splitter
+"""
