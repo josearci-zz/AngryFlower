@@ -1,5 +1,5 @@
 import sys
-#import Alertas
+import Alertas
 from queue import Queue
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -26,56 +26,79 @@ class CentralWidget(QWidget):
     def __init__(self):
         QWidget.__init__(self)
 
-        self.llamados = QFrame()
-        self.llamados.setFrameShape(QFrame.StyledPanel)
-        self.alarmas = QFrame()
-        self.alarmas.setFrameShape(QFrame.StyledPanel)
+        llamados = Alertas.Plot(self)
 
-        splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self.llamados)
-        splitter.addWidget(self.alarmas)
-        splitter.setSizes([800,400])
+        alarmas = QFrame()
+        alarmas.setFrameShape(QFrame.StyledPanel)
 
-        cw = QHBoxLayout()
-        cw.addWidget(splitter)
-        self.setLayout(cw)
+        splitter = QGridLayout()
+        splitter.addLayout(llamados.grid,0,0)
+        splitter.addWidget(alarmas,0,1)
+        splitter.setColumnMinimumWidth(0,800)
+        splitter.setColumnMinimumWidth(1,400)
+
+        self.setLayout(splitter)
 
 class BottomWidget(QWidget):
     def __init__(self):
         QWidget.__init__(self)
-        btn0 = QPushButton('Cama 0', self)
-        btn1 = QPushButton('Cama 1', self)
+        global QueueAtender
+        global QueueAtendido
+
+        btn0_on = QPushButton('Cama 0 on', self)
+        btn1_on = QPushButton('Cama 1 on', self)
+        btn2_on = QPushButton('Baño 69 on', self)
         btn0_off = QPushButton('Cama 0 off', self)
         btn1_off = QPushButton('Cama 1 off', self)
+        btn2_off = QPushButton('Baño 69 off', self)
 
         botones = QHBoxLayout()
-        botones.addWidget(btn0)
-        botones.addWidget(btn1)
+        botones.addWidget(btn0_on)
+        botones.addWidget(btn1_on)
+        botones.addWidget(btn2_on)
         botones.addWidget(btn0_off)
         botones.addWidget(btn1_off)
+        botones.addWidget(btn2_off)
         self.setLayout(botones)
 
-        btn0.clicked.connect(self.boton0)
-        btn1.clicked.connect(self.boton1)
+        btn0_on.clicked.connect(self.boton0_on)
+        btn1_on.clicked.connect(self.boton1_on)
+        btn2_on.clicked.connect(self.boton2_on)
         btn0_off.clicked.connect(self.boton0_off)
         btn1_off.clicked.connect(self.boton1_off)
+        btn2_off.clicked.connect(self.boton2_off)
 
-    def boton0(self):
-        global QueueCamas
-        QueueAtender.put(1)
+        self.enviarsenal = Alertas.SistemaAlertas()
 
-    def boton1(self):
-        global QueueCamas
-        QueueAtender.put(2)
+    def boton0_on(self):
+        cb_id = 1
+        QueueAtender.put(cb_id)
+        self.enviarsenal(QueueAtender,QueueAtendido)
+
+    def boton1_on(self):
+        cb_id = 2
+        QueueAtender.put(cb_id)
+        self.enviarsenal(QueueAtender,QueueAtendido)
+
+    def boton2_on(self):
+        cb_id = 3
+        QueueAtender.put(cb_id)
+        self.enviarsenal(QueueAtender,QueueAtendido)
 
     def boton0_off(self):
-        global QueueCamas
-        QueueCamas.put(1)
+        cb_id = 1
+        QueueAtendido.put(cb_id)
+        self.enviarsenal(QueueAtender,QueueAtendido)
 
     def boton1_off(self):
-        global QueueCamas
-        QueueCamas.put(2)
+        cb_id = 2
+        QueueAtendido.put(cb_id)
+        self.enviarsenal(QueueAtender,QueueAtendido)
 
+    def boton2_off(self):
+        cb_id = 3
+        QueueAtendido.put(cb_id)
+        self.enviarsenal(QueueAtender,QueueAtendido)
 
 if __name__== '__main__':
     QueueAtender = Queue()
