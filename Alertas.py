@@ -3,36 +3,51 @@ from queue import Queue
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
+QueueAtender = Queue()
+QueueAtendido = Queue()
+
 class SistemaAlertas(object):
-    def __init__(self):
+    def __init__(self, parent=None):
+        super(SistemaAlertas, self).__init__()
         self.plot = Plot()
         self.manejolistas = ManejoListas()
         self.lista_llamados = []
+        self.lista_total = []
         self.tiempo = []
 
-    # Procesar señal
-    def __call__(self, QueueAtender, QueueAtendido):
+        self.plot.btn0_on.clicked.connect(lambda: self.boton_on(1))
+        self.plot.btn1_on.clicked.connect(lambda: self.boton_on(2))
+        self.plot.btn2_on.clicked.connect(lambda: self.boton_on(3))
+        self.plot.btn0_off.clicked.connect(lambda: self.boton_off(1))
+        self.plot.btn1_off.clicked.connect(lambda: self.boton_off(2))
+        self.plot.btn2_off.clicked.connect(lambda: self.boton_off(3))
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.actualizarListaPantalla)
+        self.timer.start(1000)
+
+    def procesarSenal(self):
+        global QueueAtender
+        global QueueAtendido
         # Quitar paciente
         if not QueueAtendido.empty() and len(self.lista_llamados)!=0:
             dato_saliente = QueueAtendido.get()
-            if self.manejolistas.existe(dato_saliente,self.lista_llamados):
-                apuntador = self.lista_llamados.index(dato_saliente)
-                self.tiempo.remove(self.tiempo[apuntador])
-                self.lista_llamados.remove(dato_saliente)
-                self.actualizarListaPantalla()
+            apuntador = self.lista_llamados.index(dato_saliente)
+            self.tiempo.remove(self.tiempo[apuntador])
+            self.lista_llamados.remove(dato_saliente)
 
         # Poner paciente
         elif not QueueAtender.empty():
             dato_entrante = QueueAtender.get()
-            if not self.manejolistas.existe(dato_entrante, self.lista_llamados):
-                tiempo_inicio = time.time()
-                self.tiempo.append(tiempo_inicio)
-                self.lista_llamados.append(dato_entrante)
-                self.actualizarListaPantalla()
+            tiempo_inicio = time.time()
+            self.tiempo.append(tiempo_inicio)
+            self.lista_llamados.append(dato_entrante)
+
+        self.actualizarListaPantalla()
 
     def calculotiempo(self, apuntador):
         tiempo_actual = time.time()
-        tiempo_diferencia = tiempo_actual-self.tiempo[apuntador]
+        tiempo_diferencia = int((tiempo_actual-self.tiempo[apuntador])/1) # poner 60 para minutos
         return tiempo_diferencia
 
     def actualizarListaPantalla(self): # esta funcion no me gusta puede pasar a ser un apuntador
@@ -43,9 +58,19 @@ class SistemaAlertas(object):
             else:
                 self.plot.update(i,self.manejolistas.quienesesteID(0)," ")
 
+    def boton_on(self,dato):
+        if not self.manejolistas.existe(dato,self.lista_llamados):
+            QueueAtender.put(dato)
+            self.procesarSenal()
+
+    def boton_off(self,dato):
+        if self.manejolistas.existe(dato,self.lista_llamados):
+            QueueAtendido.put(dato)
+            self.procesarSenal()
+
 class ManejoListas(object):
     def __init__(self):
-        self.nombres_camas = [["Habitacion","1","Luis Felipe"],["Habitacion","2","Jose Ricardo"],["Baño","69","Angry Flower"]]
+        self.nombres_camas = [["Habitación","1","a","Luis Felipe"],["Habitación","2","b","José Ricardo"],["Baño","69"," ","Angry Flower"]]
 
     def update_lista(self):
         pass
@@ -57,8 +82,8 @@ class ManejoListas(object):
             return False
 
     def quienesesteID(self, dato):
-        if dato==0:
-            paciente = [" "," "," "]
+        if dato == 0:
+            paciente = [" "," "," "," "]
         else:
             paciente = self.nombres_camas[dato-1]
         return paciente
@@ -67,33 +92,48 @@ class Plot(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
 
-        self.grid = QGridLayout()
-        filas = [60]*10
-        for i in range(len(filas)):
-            self.grid.setRowMinimumHeight(i,filas[i])
+        self.btn0_on = QPushButton('Cama 0 on', self)
+        self.btn1_on = QPushButton('Cama 1 on', self)
+        self.btn2_on = QPushButton('Baño 69 on', self)
+        self.btn0_off = QPushButton('Cama 0 off', self)
+        self.btn1_off = QPushButton('Cama 1 off', self)
+        self.btn2_off = QPushButton('Baño 69 off', self)
 
-        #for i in range(10):
-        #        self.grid.addWidget(QLabel("B"+str(i)),i,0)
+        botones = QHBoxLayout()
+        botones.addWidget(self.btn0_on)
+        botones.addWidget(self.btn1_on)
+        botones.addWidget(self.btn2_on)
+        botones.addWidget(self.btn0_off)
+        botones.addWidget(self.btn1_off)
+        botones.addWidget(self.btn2_off)
+
+        self.grid = QGridLayout()
+        self.grid.sizeHint()
+        filas = 11
+        columnas = [100,50,50,450,150]
+        self.label_array = []
+        for i in range(filas-1):
+            temp = []
+            for j in range(len(columnas)):
+                temp.append(QLabel())
+                #temp[j].setTextFormat
+            self.label_array.append(temp)
+        for i in range(filas-1):
+            for j in range(len(columnas)):
+                self.grid.addWidget(self.label_array[i][j],i,j)
+        for i in  range(len(columnas)):
+            self.grid.setColumnMinimumWidth(i,columnas[i])
+
+        self.grid.addLayout(botones,10,0,1,5)
 
     def update(self, fila, lista, tiempo):
-        tipo_label = QLabel()
-        numero_label = QLabel()
-        nombre_label = QLabel()
-        tiempo_label = QLabel()
-        grid = QGridLayout()
-
-        columnas = [100,50,550,100]
-        for i in range(len(columnas)):
-            grid.setColumnMinimumWidth(i,columnas[i])
-
-        tipo_label.setText(lista[0])
-        numero_label.setText(lista[1])
-        nombre_label.setText(lista[2])
-        tiempo_label.setText(tiempo)
-
-        grid.addWidget(tipo_label,0,0)
-        grid.addWidget(numero_label,0,1)
-        grid.addWidget(nombre_label,0,2)
-        grid.addWidget(tiempo_label,0,3)
-
-        return grid
+        self.label_array[fila][0].clear()
+        self.label_array[fila][1].clear()
+        self.label_array[fila][2].clear()
+        self.label_array[fila][3].clear()
+        self.label_array[fila][4].clear()
+        self.label_array[fila][0].setText(lista[0])
+        self.label_array[fila][1].setText(lista[1])
+        self.label_array[fila][2].setText(lista[2])
+        self.label_array[fila][3].setText(lista[3])
+        self.label_array[fila][4].setText(tiempo)
