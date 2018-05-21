@@ -1,10 +1,12 @@
 import time
 import atexit
+#import pygsheets
 import ConexionSerial
 from queue import Queue
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
+#from oauth2client.service_account import ServiceAccountCredentials
 
 QueueAtender = Queue()
 QueueAtendido = Queue()
@@ -78,6 +80,9 @@ class SistemaAlertas(object):
 
 class ManejoListas(object):
     def __init__(self):
+        #self.gc = pygsheets.authorize(outh_file='San Luis-61efa7ccd382.json')
+        #self.sheet = self.gc.open("Lista San Luis").sheet1
+        #print(self.sheet)
         self.nombres_camas = [["Habitación","1","a","Luis Felipe"],["Habitación","2","b","José Ricardo"],["Baño","69"," ","Angry Flower"]]
 
     def update_lista(self):
