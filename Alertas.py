@@ -1,7 +1,7 @@
 import time
 import atexit
 #import pygsheets
-import ConexionSerial
+#import ConexionSerial
 from queue import Queue
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -16,7 +16,7 @@ class SistemaAlertas(object):
         super(SistemaAlertas, self).__init__()
         self.plot = Plot()
         self.manejolistas = ManejoListas()
-        self.conexion = ConexionSerial.ReadSerial()
+        #self.conexion = ConexionSerial.ReadSerial()
         self.lista_llamados = []
         self.lista_total = []
         self.tiempo = []
@@ -25,15 +25,12 @@ class SistemaAlertas(object):
         self.timer.timeout.connect(self.procesarSenal)
         self.timer.start(50)
 
-        atexit.register(self.conexion.cerrar_puerto)
+        #atexit.register(self.conexion.cerrar_puerto)
 
     def procesarSenal(self):
         global QueueAtender
         global QueueAtendido
-
-        # Leer Serial
-        inc_value = self.conexion.read()
-
+        inc_value = 100
         if inc_value < 0:
             self.llamado_off(abs(inc_value))
             # Quitar paciente
@@ -42,7 +39,8 @@ class SistemaAlertas(object):
                 apuntador = self.lista_llamados.index(dato_saliente)
                 self.tiempo.remove(self.tiempo[apuntador])
                 self.lista_llamados.remove(dato_saliente)
-
+        #inc_value = self.conexion.read()
+        inc_value = 2
         if inc_value > 0:
             self.llamado_on(inc_value)
             # Poner paciente
@@ -83,7 +81,7 @@ class ManejoListas(object):
         #self.gc = pygsheets.authorize(outh_file='San Luis-61efa7ccd382.json')
         #self.sheet = self.gc.open("Lista San Luis").sheet1
         #print(self.sheet)
-        self.nombres_camas = [["Habitación","1","a","Luis Felipe"],["Habitación","2","b","José Ricardo"],["Baño","69"," ","Angry Flower"]]
+        self.nombres_camas = [["Habitación","1","a","Luis Felipe"],["Habitación","2","b","José Ricañdo"],["Baño","69"," ","Angry Flower"]]
 
     def update_lista(self):
         pass
